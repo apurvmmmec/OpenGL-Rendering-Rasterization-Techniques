@@ -26,8 +26,26 @@ struct Material {
   float glossiness;
 
   // Put the variables for reflection and refraction here
-  float reflectionWeight;
+  
+  /*
+  	reflectionWeight
+  	reflectionWeigh tells about the reflectivity of the material. Value between 0.0 and 1.0 with 
+    0.0 for perfectly non reflective and 1.0 for perfect reflective surface.
+  */
+  float reflectionWeight; 
+  
+  /*
+  	refIndex
+    refIndex is the refractive index of material.
+  */
   float refIndex;
+  
+  /*
+  	refractionWeight
+    This parameter is used to describe the level of refractivity of the material. Its intention is different 
+    from refractive index. It can be compared to opacity and tells how much the surface will be reractive or 
+    see-through. Its value is also between 0 and 1 
+  */
   float refractionWeight;
 };
 
@@ -111,16 +129,36 @@ HitInfo intersectSphere(const Ray ray, const Sphere sphere) {
     }
     return getEmptyHit();
 }
+/*
+	---------------------------------------------------
+    			Ray-Plane Intersection
+    ---------------------------------------------------
+	Equation of ray with origin at O and direction D is
+	P = O + t*D
+    Equation of plane at distance d and normal V is
+  	P.V + d= 0
+    For ray and plane intersection
+    (O+t*D).V +d=0
+    O.V + t*D.V + d = 0
+    t= -(O.V +d)/(D.V)
+    Point of intersection is (O +t*D )
+    Normal at point of intersection is plane normal i.e V
+    The material the we return in the hitInfo is the material of plane.
 
+*/
+  
 HitInfo intersectPlane(const Ray ray,const Plane plane) {
-  vec3 O=ray.origin;
-  vec3 V=plane.normal;
-  vec3 D= ray.direction;
+  vec3  O = ray.origin;
+  vec3  D = ray.direction;
+  vec3  V = plane.normal;
+  float d = plane.d;
+  
   float DVdot = dot(D,V);
-  float OVdot = dot(ray.origin,V);
+  float OVdot = dot(O,V);
+  
   if(DVdot != 0.0){
-  	float t= -(dot(ray.origin,V) +plane.d)/ dot(D,V);
-    vec3 hitPosition = ray.origin + t * ray.direction;
+  	float t= -(dot(O,V) + d)/ dot(D,V);
+    vec3 hitPosition = O + t*D;
   	return HitInfo(
           	true,
           	t,
@@ -135,28 +173,71 @@ float lengthSquared(vec3 x) {
   return dot(x, x);
 }
 
+/*
+	---------------------------------------------------
+    			Ray-Cylinder Intersection
+    ---------------------------------------------------
+    Equation of ray with origin at O and direction D is
+	P = O + t*D
+    Equation of cylinder at position C, direction V and radius r
+  	A = C +V*m , where m is a scalar that determines the closest 
+    point on the axis to the hit point. 
+    For ray and cylinder intersection
+    (P-C-V*m) . V = 0
+   	(P-C).V = m*(V.V) = m   (len(V)=1)
+    (P-C).V = m
+    (O + D*t -C).V =m
+    Let X = O-C
+    So
+   	m = (D*t+X).V
+   	m = D.V*t + X.V
+    
+    Also
+    len(P-C-V*m) = r
+    (D*t+X - V*(D.V*t + X.V)).((D*t+X - V*(D.V*t + X.V))) = r^2
+    t^2(((D-V*(D.V))).((D-V*(D.V)))) 
+    +2t((X-V*(X.V)).(D-V*(D.V)))
+    + (X-V*(X.V)).(X-V*(X.V)) = r^2
+    Simplification gives equation of form
+    a*t^2+b*t+c=0
+    Here
+    a= D.D -D.V*D.V;
+    b=2(D.X -(D.V)*(X.V))
+    c=X.X -(X.V)*(X.V)-r^2
+    
+    We solve this quadratic equation and find solution of t which is min of t1 and t2
+    d= b*b - 4*a*c
+    
+    Then the hit position is
+    hitPosition = O + t * D
+    The normal at the point of hit position is
+    normal = normalise(hitPosition - C -V*m)
+    the material the we return in the hitInfo is the material of cylinder.
+*/
+
 HitInfo intersectCylinder(const Ray ray, const Cylinder cylinder) {
   vec3 O = ray.origin;
-  vec3 C = cylinder.position;
   vec3 D = ray.direction;
+  vec3 C = cylinder.position;
   vec3 V = cylinder.direction;
+  float r= cylinder.radius;
   vec3 X = O-C;
   float a = dot(D,D) -dot(D,V)*dot(D,V);
   float b = 2.0 * (dot(D, X)-dot(D,V)*dot(X,V));
-  float c = dot(X, X) -dot(X,V)*dot(X,V) -cylinder.radius * cylinder.radius;
+  float c = dot(X, X) -dot(X,V)*dot(X,V) -r*r;
   float d = b * b - 4.0 * a * c;
   if (d > 0.0)
     {
 		float t0 = (-b - sqrt(d)) / (2.0 * a);
 		float t1 = (-b + sqrt(d)) / (2.0 * a);
       	float t = min(t0, t1);
-      	vec3 hitPosition = ray.origin + t * ray.direction;
+      	vec3 hitPosition = O + t * D;
       	float m = dot(D,V)*t+dot(X,V);
         return HitInfo(
           	true,
           	t,
           	hitPosition,
-          	normalize(hitPosition - V*m - C ),
+          	normalize(hitPosition - C - V*m),
           	cylinder.material);
     }
     return getEmptyHit();
@@ -223,17 +304,38 @@ vec3 shadeFromLight(
   float diffuse_term = max(0.0, dot(lightDirection, hit_info.normal));
   float specular_term  = pow(max(0.0, dot(lightDirection, reflectedDirection)), hit_info.material.glossiness);
   // Put your shadow test here
+  
+  /*
+  To check whether a pixel is shadowed or not , we do a simple test of 
+  shooting a shadow ray from the hitPoint towards light source and check if 
+  the ray intersects any object in between the hitPoint and light source.
+  If an intersection is detected, it means some object is obstructing the
+  light to the the hitPoint and it is under shadow i.e dark else not 
+  shadowded. If shadowed, we make the visibility of pixel as 0.
+  Shadow Ray origin is taken as hitPoint position and direction is taken as
+  d= lightPosition-hitPosition
+ 
+  One common mistake that may occur and which should carefully be taken
+  into consideration of is that only those intersection should be
+  considered which occur between the hitPoint and light source. Any 
+  intersection of shadowRay with any object behind the hitPoint i.e t<0
+  or behind the light source i.e t > distance(lightSource and hitPoint)
+  should not count towards shadow.
+  */
   float visibility = 1.0;
-  Ray shadowRay;
+  Ray shadowRay; // Shadow Ray
   shadowRay.origin = hit_info.position;
   shadowRay.direction = hitToLight;
+  //Check if shadowRay intersects with any object in scene
   HitInfo shadowHitInfo = intersectScene(scene, shadowRay, 0.001, 100000.0);
+  
+  //Distance between light source and hitPoint
   float hitLightDist = distance(light.position,hit_info.position);
   if(shadowHitInfo.hit){
-    if(hit_info.t<=hitLightDist){
+    //To check if intersection happened between light and hitPoint
+    if(hit_info.t>0.0 && hit_info.t<=hitLightDist){
     	visibility=0.0;
-    }
-    
+    } 
   }
   
   return 	visibility * 
@@ -347,7 +449,7 @@ Material getPlasticMaterial() {
   // Replace by your definition of a plastic material
   Material m;
   m.diffuse  =vec3(1.0, 0.0, 0.0);
-  m.specular =vec3(0.6);//,1.0,1.0);;
+  m.specular =vec3(0.6,0.6,0.6);
   m.glossiness=20.0,
   m.reflectionWeight=0.1;
   m.refIndex=0.0;
@@ -359,7 +461,7 @@ Material getGlassMaterial() {
   // Replace by your definition of a glass material
   Material m;
   m.diffuse  =vec3(0.0, 0.0, 0.0);
-  m.specular =vec3(0.0);//,0.6,0.6);
+  m.specular =vec3(0.0,0.0,0.0);
   m.glossiness=1.0;
   m.reflectionWeight=0.4;
   m.refIndex=1.3;
@@ -370,8 +472,8 @@ Material getGlassMaterial() {
 Material getSteelMirrorMaterial() {
   // Replace by your definition of a steel mirror material
   Material m;
-  m.diffuse  =vec3(0.0);//, 0.2, 0.2);
-  m.specular =vec3(0.5);;
+  m.diffuse  =vec3(0.0);//,0.0,0.0);
+  m.specular =vec3(0.5,0.5,0.5);
   m.glossiness=10.0;
   m.reflectionWeight=0.6;
   m.refIndex=0.0;
