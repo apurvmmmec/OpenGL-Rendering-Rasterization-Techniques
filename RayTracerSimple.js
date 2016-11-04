@@ -312,8 +312,8 @@ vec3 shadeFromLight(
   If an intersection is detected, it means some object is obstructing the
   light to the the hitPoint and it is under shadow i.e dark else not 
   shadowded. If shadowed, we make the visibility of pixel as 0.
-  Shadow Ray origin is taken as hitPoint position and direction is taken as
-  d= lightPosition-hitPosition
+  Shadow Ray origin is taken as hitPoint position and 
+  Shadow Ray direction is taken as d= lightPosition-hitPosition
  
   One common mistake that may occur and which should carefully be taken
   into consideration of is that only those intersection should be
@@ -385,15 +385,16 @@ vec3 colorForFragment(const Scene scene, const vec2 fragCoord) {
   	
   	// Compute the reflection
   	/*
-    	For calculating the reflected ray at any hitPoint , we consider the current ray
-        as the incoming ray at that hitPoint. We can also get the normal at the hitPoint
-        from the currentHitInfo.
+    	For calculating the reflected ray at any hitPoint , we use the GLSL function 
+        reflect(IncidentRay, Normal) which returns the direction  of the reflected ray.
+        The current ray becomes the incoming ray at that hitPoint. 
+        Normal at the hitPoint is also taken from the currentHitInfo.
         These are the only two porameters needed to calculate the reflected ray at the hitPoint.
-        We use the GLSL function reflect(IncidentRay,, Normal) which returns the direction 
-        of reflected ray.
-        The origin of reflected Ray is the hitPoint itself.
-        We then use this newly computed reflected Ray and calculate further intersections with 
-        other objects in scene.
+        The origin of reflected Ray is the hitPoint itself. This reflectedRay is checked for inersection 
+        with other objects in the scene the same way as the initial Ray was tested.
+       	Reflected Ray also contributes to the resultant colour at the hit point. The extent of contribution
+        depends upon the property of material which we have called here 'reflevctioWeight'. This tells
+        how reflective the surface is, and hence ho much it contributes to resultant color of the hitPoint.
     */
   	currentRay = initialRay;
   	currentHitInfo = initialHitInfo;
@@ -417,6 +418,21 @@ vec3 colorForFragment(const Scene scene, const vec2 fragCoord) {
     }
 
   	// Compute the refraction
+  /*
+    	For calculating the refracted ray at any hitPoint , we use the GLSL function 
+        refract(IncidentRay, Normal, eta) which returns the direction  of the refracted ray.
+        The current ray becomes the incoming ray at that hitPoint. 
+        Normal at the hitPoint is also taken from the currentHitInfo.
+        the parameter eta is ratio n1/n2, where n1 and n2 are refrative indices of medium 1 and 2 
+        respectively. Our material class definition has a property called 'refractiveIndex' to care of 
+        this parameter.
+        The origin of refracted Ray is the hitPoint itself. This refracted Ray is checked for inersection 
+        with other objects in the scene the same way as the initial Ray was tested.
+       	Refracted Ray also contributes to the resultant colour at the hit point. The extent of contribution
+        depends upon the property of material which we have called here 'refractionWeight'. This tells
+        how refractive the surface is, and hence ho much it contributes to resultant color of the hitPoint.
+        In our case we have given refractionWeight of 0.0 to the objects that we want to treat as Opaque.
+    */
   	currentRay = initialRay;  
   	currentHitInfo = initialHitInfo;
   	// The initial strength of the refraction.
@@ -426,9 +442,8 @@ vec3 colorForFragment(const Scene scene, const vec2 fragCoord) {
   	for(int i = 0; i < maxRefractionStepCount; i++) {
        
       if(!currentHitInfo.hit) break;
-
       Ray nextRay;
-	    // Put your code to compute the reflection ray
+	  // Put your code to compute the reflection ray
       nextRay.direction = 	refract(currentRay.direction,currentHitInfo.normal,1.0/currentHitInfo.material.refIndex);
       nextRay.origin= currentHitInfo.position;
 	  refractionWeight = refractionWeight*currentHitInfo.material.refractionWeight;
@@ -445,7 +460,6 @@ Material getDefaultMaterial() {
 }
 
 Material getPaperMaterial() {
-  // Replace by your definition of a paper material
   Material m;
   m.diffuse  =vec3(0.3, 0.3, 0.3);
   m.specular =vec3(0.0,0.0,0.0);
@@ -457,19 +471,17 @@ Material getPaperMaterial() {
 }
 
 Material getPlasticMaterial() {
-  // Replace by your definition of a plastic material
   Material m;
   m.diffuse  =vec3(1.0, 0.0, 0.0);
   m.specular =vec3(0.6,0.6,0.6);
   m.glossiness=20.0,
   m.reflectionWeight=0.1;
-  m.refIndex=0.0;
+  m.refIndex=1.49;
   m.refractionWeight =0.0;
   return m;
 }
 
 Material getGlassMaterial() {
-  // Replace by your definition of a glass material
   Material m;
   m.diffuse  =vec3(0.0, 0.0, 0.0);
   m.specular =vec3(0.0,0.0,0.0);
@@ -481,13 +493,12 @@ Material getGlassMaterial() {
 }
 
 Material getSteelMirrorMaterial() {
-  // Replace by your definition of a steel mirror material
   Material m;
   m.diffuse  =vec3(0.0);//,0.0,0.0);
   m.specular =vec3(0.5,0.5,0.5);
   m.glossiness=10.0;
   m.reflectionWeight=0.6;
-  m.refIndex=0.0;
+  m.refIndex=2.93;
   m.refractionWeight =0.0;
   
   return m;}
