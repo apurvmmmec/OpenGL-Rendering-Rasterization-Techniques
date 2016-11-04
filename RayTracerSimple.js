@@ -384,6 +384,17 @@ vec3 colorForFragment(const Scene scene, const vec2 fragCoord) {
   	HitInfo currentHitInfo;
   	
   	// Compute the reflection
+  	/*
+    	For calculating the reflected ray at any hitPoint , we consider the current ray
+        as the incoming ray at that hitPoint. We can also get the normal at the hitPoint
+        from the currentHitInfo.
+        These are the only two porameters needed to calculate the reflected ray at the hitPoint.
+        We use the GLSL function reflect(IncidentRay,, Normal) which returns the direction 
+        of reflected ray.
+        The origin of reflected Ray is the hitPoint itself.
+        We then use this newly computed reflected Ray and calculate further intersections with 
+        other objects in scene.
+    */
   	currentRay = initialRay;
   	currentHitInfo = initialHitInfo;
   	// The initial strength of the reflection
