@@ -13,7 +13,7 @@ function setup()
 		id: `RasterizationDemoFS`,
 		initialValue: `#define PROJECTION
 #define RASTERIZATION
-//#define CLIPPING
+#define CLIPPING
 //#define INTERPOLATION
 //#define ZBUFFERING
 
@@ -77,6 +77,7 @@ void makeEmptyPolygon(out Polygon polygon) {
 int getCrossType(Vertex poli1, Vertex poli2, Vertex wind1, Vertex wind2) {
 #ifdef CLIPPING
     // Put your code here
+  return INSIDE;
 #else
     return INSIDE;
 #endif
@@ -86,45 +87,29 @@ int getCrossType(Vertex poli1, Vertex poli2, Vertex wind1, Vertex wind2) {
 Vertex intersect2D(Vertex a, Vertex b, Vertex c, Vertex d) {
 #ifdef CLIPPING
     // Put your code here
+  	float x1,y1,x2,y2,x3,y3,x4,y4,A1,A2,B1,B2,C1,C2,delta,x,y;
+  	Vertex res;
+  	x1 = a.position.x; y1 = a.position.y;
+  	x2 = b.position.x; y2 = b.position.y;
+  	x3 = c.position.x; y3 = c.position.y;
+  	x4 = d.position.x; y4 = d.position.y;
+  	A1 = y2-y1;
+  	B1 = x1-x2;
+  	C1 = A1*x1 + B1*y1;
+  	A2 = y4-y3;
+  	B2 = x3-x4;
+  	C2 = A2*x3 + B2*y3;
+  	delta = A1*B2 - A2*B1;
+  	x = (B2*C1 - B1*C2)/delta;
+	y = (A1*C2 - A2*C1)/delta;
+  	res.position = vec3(x,y,0.0);
+  	res.color = vec3(0.0,0.0,0.0);
+  return res;
+  
 #else
     return a;
 #endif
 }
-
-void sutherlandHodgmanClip(Polygon unclipped, Polygon clipWindow, out Polygon result) {
-    Polygon clipped;
-    copyPolygon(clipped, unclipped);
-
-    // Loop over the clip window
-    for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
-        if (i >= clipWindow.vertexCount) break;
-
-        // Make a temporary copy of the current clipped polygon
-        Polygon oldClipped;
-        copyPolygon(oldClipped, clipped);
-
-        // Set the clipped polygon to be empty
-        makeEmptyPolygon(clipped);
-
-        // Loop over the current clipped polygon
-        for (int j = 0; j < MAX_VERTEX_COUNT; ++j) {
-            if (j >= oldClipped.vertexCount) break;
-            
-            // Handle the j-th vertex of the clipped polygon. This should make use of the function 
-            // intersect() to be implemented above.
-#ifdef CLIPPING
-            // Put your code here
-#else
-            appendVertexToPolygon(clipped, getWrappedPolygonVertex(oldClipped, j));
-#endif
-        }
-    }
-
-    // Copy the last version to the output
-    copyPolygon(result, clipped);
-}
-
-// Rasterization and culling part
 
 #define INNER_SIDE 0
 #define OUTER_SIDE 1
@@ -153,30 +138,99 @@ int edge(vec2 point, Vertex a, Vertex b) {
     return OUTER_SIDE;
 }
 
+void sutherlandHodgmanClip(Polygon subjectPolygon, Polygon clipWindow, out Polygon result) {
+    Polygon outputList;
+    copyPolygon(outputList, subjectPolygon); //O/P=[a,b,c,d]
+	Vertex A,B;
+    // Loop over the clip window
+  	// Define Edge E by selecting two vertices A and B from clipPolygon
+  	// If A is 0th vertex B is last vertex
+  	// Else if A is i vertex, B is (i-i) vertex
+    for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
+        if (i >= clipWindow.vertexCount) break;
+    	
+        A=clipWindow.vertices[i];
+
+      	//Deal with all edges one by one
+		if(i==0){
+          B= getWrappedPolygonVertex(clipWindow,clipWindow.vertexCount-1)  ;
+          }
+       	  else{ // Choose B is (i-1)th vertex
+                B=clipWindow.vertices[i-1];         	
+       	  }      
+      	  // Edge E is A----B
+
+        // Make a temporary copy of the current outputList polygon
+        Polygon inputList;
+        copyPolygon(inputList, outputList);
+		//inputlist = [a,b,c,d]
+
+        // Set the outputList polygon to be empty
+        makeEmptyPolygon(outputList);
+		Vertex S = getWrappedPolygonVertex(inputList,inputList.vertexCount-1);
+        // Loop over the inputList polygon
+        for (int j = 0; j < MAX_VERTEX_COUNT; ++j) {
+            if (j >= inputList.vertexCount) break;
+            // Handle the j-th vertex of the outputList polygon. This should make use of the function 
+            // intersect() to be implemented above.
+#ifdef CLIPPING
+            // Put your code here
+          Vertex E =  getWrappedPolygonVertex(inputList,j);
+          	int e = edge(vec2(E.position.x,E.position.y),A,B);
+            int s = edge(vec2(S.position.x,S.position.y),A,B);
+          	if(e == 1){ //E is inside
+              if (s == -1){
+              	appendVertexToPolygon(outputList, intersect2D(S,E,A,B));
+              }
+              appendVertexToPolygon(outputList, E);
+            }
+          	else if (s == 1){ // S is inside
+              appendVertexToPolygon(outputList, intersect2D(S,E,A,B));
+            }
+          	S=E;
+#else
+            appendVertexToPolygon(outputList, getWrappedPolygonVertex(inputList, j));
+#endif
+        }
+    }
+
+    // Copy the last version to the output
+    copyPolygon(result, outputList);
+}
+
+// Rasterization and culling part
+
 // Returns if a point is inside a polygon or not
 bool isPointInPolygon(vec2 point, Polygon polygon) {
     // Don't evaluate empty polygons
     if (polygon.vertexCount == 0) return false;
     // Check against each edge of the polygon
     bool rasterise = true;
+  	int r2=-2;
+  	int r=0;
     for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
         if (i < polygon.vertexCount) {
 #ifdef RASTERIZATION
             // Put your code here
-          
-          /*if(i=0){
-            j=i-1;
-          }*/
-          int r1 = edge(point,polygon.vertices[0],polygon.vertices[2]);
-  		  //int r2 = edge(point,polygon.vertices[1],polygon.vertices[0]);
-  		  //int r3 = edge(point,polygon.vertices[2],polygon.vertices[1]);
-  	
-    if(r1==r2 && r1==r3)
-      rasterise=true;
-  else
-    rasterise=false;
-               
-               
+          if(i==0){
+             r = edge(point,polygon.vertices[i],getWrappedPolygonVertex(polygon,polygon.vertexCount-1));            
+          }
+       	  else{
+            r = edge(point,polygon.vertices[i],polygon.vertices[i-1]);
+       	  }
+          if(r2 == -2){
+            r2 = r;
+          }
+          else{
+            if(r2*r>0){
+      			rasterise = true;
+              	r2=r;
+            }
+  			else{
+    			rasterise = false;
+            	break;
+            }
+          }            
 #else
             rasterise = false;
 #endif
