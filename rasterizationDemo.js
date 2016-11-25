@@ -15,7 +15,7 @@ function setup()
 #define RASTERIZATION
 #define CLIPPING
 #define INTERPOLATION
-//#define ZBUFFERING
+#define ZBUFFERING
 
 precision highp float;
 
@@ -87,24 +87,33 @@ int getCrossType(Vertex poli1, Vertex poli2, Vertex wind1, Vertex wind2) {
 Vertex intersect2D(Vertex a, Vertex b, Vertex c, Vertex d) {
 #ifdef CLIPPING
     // Put your code here
+  	// We know that he equation of line betwen 2 points (x1,y1) and (x2,y2) is 
+  	//              y-y1=( (y2-y1)/(x2-x1) )* (x-x1)
+  	// or 			y= ( (y2-y1)/(x2-x1) )* (x-x1) + y1 ------------------ (1)
+  	// Similarly another line can be wrien as
+  	//				y= ( (y4-y3)/(x4-x3) )* (x-x3) + y3	------------------ (2)
+  	// Solving eqn 1 an 2 , we can get x and y coord of intersection point
+                       
   	float x1,y1,x2,y2,x3,y3,x4,y4,A1,A2,B1,B2,C1,C2,delta,x,y;
   	Vertex res;
   	x1 = a.position.x; y1 = a.position.y;
   	x2 = b.position.x; y2 = b.position.y;
   	x3 = c.position.x; y3 = c.position.y;
   	x4 = d.position.x; y4 = d.position.y;
-  	A1 = y2-y1;
+  	
+    A1 = y2-y1;
+    A2 = y4-y3;
   	B1 = x1-x2;
-  	C1 = A1*x1 + B1*y1;
-  	A2 = y4-y3;
-  	B2 = x3-x4;
+    B2 = x3-x4;
+  	
+    C1 = A1*x1 + B1*y1;
   	C2 = A2*x3 + B2*y3;
-  	delta = A1*B2 - A2*B1;
+    delta = A1*B2 - A2*B1;
+  	
   	x = (B2*C1 - B1*C2)/delta;
 	y = (A1*C2 - A2*C1)/delta;
   	res.position = vec3(x,y,0.0);
-  	//res.color = vec3(0.0,0.0,0.0);
-  return res;
+    return res;
   
 #else
     return a;
@@ -268,7 +277,7 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
     for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
         if (i < polygon.vertexCount) {
 #if defined(INTERPOLATION) || defined(ZBUFFERING)
-            // Put your code here
+          // Put your code here
           Vertex V1,V2;
           V1 = getWrappedPolygonVertex(polygon,i+1);
           if(i+1 == polygon.vertexCount){
@@ -279,21 +288,16 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
           }
           float weight = triangleArea(vec2(V1.position.x,V1.position.y) ,vec2(V2.position.x,V2.position.y),point);
           weightSum = weightSum + weight;
+          depthSum = depthSum+weight*(1.0/polygon.vertices[i].position.z);
+
 #else
 #endif
 #ifdef ZBUFFERING
-            // Put your code here
-          depthSum = dephthSum+weight*(1/polygon.vertices[i].position.z);
-  
-  
+            // Put your code here     
+          positionSum= positionSum+weight*polygon.vertices[i].position; 
 #endif
 #ifdef INTERPOLATION
-          
-           	
-          
           colorSum= colorSum + weight*polygon.vertices[i].color;
-          
-          
           
 #endif
         }
@@ -305,7 +309,7 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
     colorSum /= weightSum;
     positionSum /= weightSum;
     depthSum /= weightSum;
-    //colorSum /= depthSum;    
+    colorSum /= depthSum;    
     result.color = colorSum;
 #endif
 #ifdef ZBUFFERING
@@ -448,9 +452,9 @@ void drawScene(vec2 point, inout vec3 color) {
     triangles[1].vertices[0].position = vec3(3.0836, -4.3820, 1.9);
     triangles[1].vertices[1].position = vec3(-3.9667, 0.7933, 0.5);
     triangles[1].vertices[2].position = vec3(-4.3714, 8.2286, 1.0);
-    triangles[1].vertices[1].color = vec3(0.1, 0.5, 1.0);
-    triangles[1].vertices[2].color = vec3(1.0, 0.6, 0.1);
-    triangles[1].vertices[0].color = vec3(0.2, 0.6, 1.0);
+    triangles[1].vertices[0].color = vec3(0.1, 0.5, 1.0);
+    triangles[1].vertices[1].color = vec3(1.0, 0.6, 0.1);
+    triangles[1].vertices[2].color = vec3(0.2, 0.6, 1.0);
     triangles[1].vertexCount = 3;
 
     float depth = 10000.0;
