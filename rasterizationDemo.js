@@ -103,7 +103,7 @@ Vertex intersect2D(Vertex a, Vertex b, Vertex c, Vertex d) {
   	x = (B2*C1 - B1*C2)/delta;
 	y = (A1*C2 - A2*C1)/delta;
   	res.position = vec3(x,y,0.0);
-  	res.color = vec3(0.0,0.0,0.0);
+  	//res.color = vec3(0.0,0.0,0.0);
   return res;
   
 #else
@@ -263,41 +263,41 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
     vec3 colorSum = vec3(0.0);
     vec3 positionSum = vec3(0.0);
     float depthSum = 0.0;
-    //for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
-      //  if (i < polygon.vertexCount) {
+  	Vertex result;
+  	mat2 zBuffer;
+    for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
+        if (i < polygon.vertexCount) {
 #if defined(INTERPOLATION) || defined(ZBUFFERING)
             // Put your code here
+          Vertex V1,V2;
+          V1 = getWrappedPolygonVertex(polygon,i+1);
+          if(i+1 == polygon.vertexCount){
+            V2 = getWrappedPolygonVertex(polygon,1);
+
+          }else{
+            V2 = getWrappedPolygonVertex(polygon,i+2);
+          }
+          float weight = triangleArea(vec2(V1.position.x,V1.position.y) ,vec2(V2.position.x,V2.position.y),point);
+          weightSum = weightSum + weight;
 #else
 #endif
 #ifdef ZBUFFERING
             // Put your code here
+          depthSum = dephthSum+weight*(1/polygon.vertices[i].position.z);
+  
+  
 #endif
 #ifdef INTERPOLATION
-            // Put your code here
-          vec2 A =vec2(polygon.vertices[0].position.x,polygon.vertices[0].position.y);
-          vec2 B =vec2(polygon.vertices[1].position.x,polygon.vertices[1].position.y);
-          vec2 C =vec2(polygon.vertices[2].position.x,polygon.vertices[2].position.y);
-                    
-
-          float area_polygon = triangleArea(A,B,C);
-          float area_pab = triangleArea(point,A,B);
-          float area_pbc = triangleArea(point,B,C);
-          float area_pac = triangleArea(point,A,C);
-          float wa,wb,wc;
-          wa= area_pbc/area_polygon;
-          wb= area_pac/area_polygon;
-          wc= area_pab/area_polygon;
-          Vertex result ;
-          //result.position =  vec3(point.x,point.y,1.0);
-  
-          result.color= wa*polygon.vertices[0].color+wb*polygon.vertices[1].color+wc*polygon.vertices[2].color;
-
+          
+           	
+          
+          colorSum= colorSum + weight*polygon.vertices[i].color;
           
           
           
 #endif
-       // }
-    //}
+        }
+    }
     
     //Vertex result = polygon.vertices[0];
   
@@ -305,8 +305,8 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
     colorSum /= weightSum;
     positionSum /= weightSum;
     depthSum /= weightSum;
-    colorSum /= depthSum;    
-    //result.color = colorSum;
+    //colorSum /= depthSum;    
+    result.color = colorSum;
 #endif
 #ifdef ZBUFFERING
     positionSum /= depthSum;
@@ -440,7 +440,6 @@ void drawScene(vec2 point, inout vec3 color) {
     triangles[0].vertices[0].position = vec3(-7.7143, -3.8571, 1.0);
     triangles[0].vertices[1].position = vec3(7.7143, 8.4857, 1.0);
     triangles[0].vertices[2].position = vec3(4.8857, -0.5143, 1.0);
-   
     triangles[0].vertices[0].color = vec3(1.0, 0.5, 0.1);
     triangles[0].vertices[1].color = vec3(0.2, 0.8, 0.2);
     triangles[0].vertices[2].color = vec3(0.2, 0.3, 1.0);
