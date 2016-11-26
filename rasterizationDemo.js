@@ -128,28 +128,32 @@ Vertex intersect2D(Vertex a, Vertex b, Vertex c, Vertex d) {
 int edge(vec2 point, Vertex a, Vertex b) {
 #ifdef RASTERIZATION
     // Put your code here
+  // We know that he equation of line betwen 2 points (x1,y1) and (x2,y2) is 
+  	//              y-y1=( (y2-y1)/(x2-x1) )* (x-x1)
+  	//				(x2-x1)(y-y1) - (y2-y1)*(x-x1) = P
+    // So for in point (x,y) on this line P=0 ,else depending on its on right or left of line , P > 0 or P < 0 
   float X=point.x;
   float Y=point.y;
-  float Ax = a.position.x;
-  float Ay=a.position.y;
-  float Bx=b.position.x;
-  float By=b.position.y;
+  float x1 = a.position.x;
+  float y1=a.position.y;
+  float x2=b.position.x;
+  float y2=b.position.y;
   
-  float position = sign((Bx - Ax) * (Y - Ay) - (By - Ay) * (X - Ax));
+  float position = sign((x2 - x1) * (Y - y1) - (y2 - y1) * (X - x1));
   if (position == -1.0)
-    	return -1;
+    	return -1;     // Return -1 of point is outside line
   else if(position== 1.0)
-      return 1;
+      return 1;        // Return +1, if point is inside line
   else
-    return 0;
+    return 0;			// Return 0 if point is on line
 
   #endif
     return OUTER_SIDE;
 }
 
-void sutherlandHodgmanClip(Polygon subjectPolygon, Polygon clipWindow, out Polygon result) {
-    Polygon outputList;
-    copyPolygon(outputList, subjectPolygon); //O/P=[a,b,c,d]
+void sutherlandHodgmanClip(Polygon unClipped, Polygon clipWindow, out Polygon result) {
+    Polygon clipped;
+    copyPolygon(clipped, unClipped); //O/P=[a,b,c,d]
 	Vertex A,B;
     // Loop over the clip window
   	// Define Edge E by selecting two vertices A and B from clipPolygon
@@ -158,53 +162,58 @@ void sutherlandHodgmanClip(Polygon subjectPolygon, Polygon clipWindow, out Polyg
     for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
         if (i >= clipWindow.vertexCount) break;
     	
+      	// Deal with all edges  of clipWindow one by one,
+        // I have chosen edge of clipWindow in following order, 
+        // If B ----> A is the edge of clipWindow, then I pick up edges in following order
+        // last ----> 0, 0--->1,	1---2,	(last-1)--->last	
         A=clipWindow.vertices[i];
-
-      	//Deal with all edges one by one
 		if(i==0){
           B= getWrappedPolygonVertex(clipWindow,clipWindow.vertexCount-1)  ;
           }
        	  else{ // Choose B is (i-1)th vertex
                 B=clipWindow.vertices[i-1];         	
        	  }      
-      	  // Edge E is A----B
-
+		
+      	// Now for every edge  B--->A of clipWindowm we do following tests for each edge of unclipped polygon.
         // Make a temporary copy of the current outputList polygon
-        Polygon inputList;
-        copyPolygon(inputList, outputList);
-		//inputlist = [a,b,c,d]
+        Polygon oldClipped;
+        copyPolygon(oldClipped, clipped);
 
         // Set the outputList polygon to be empty
-        makeEmptyPolygon(outputList);
-		Vertex S = getWrappedPolygonVertex(inputList,inputList.vertexCount-1);
+        makeEmptyPolygon(clipped);
+      	
+      	//We pick up the edges of unclipped polygon the same way as we picked for clipPloygon
+      	// If B ----> A is the edge of clipWindow, then I pick up edges in following order
+        // last ----> 0, 0--->1,	1---2,	(last-1)--->last	
+		Vertex S = getWrappedPolygonVertex(oldClipped,oldClipped.vertexCount-1);  // last vertex
         // Loop over the inputList polygon
         for (int j = 0; j < MAX_VERTEX_COUNT; ++j) {
-            if (j >= inputList.vertexCount) break;
+            if (j >= oldClipped.vertexCount) break;
             // Handle the j-th vertex of the outputList polygon. This should make use of the function 
             // intersect() to be implemented above.
 #ifdef CLIPPING
             // Put your code here
-          Vertex E =  getWrappedPolygonVertex(inputList,j);
+          	Vertex E =  getWrappedPolygonVertex(oldClipped,j);
           	int e = edge(vec2(E.position.x,E.position.y),A,B);
             int s = edge(vec2(S.position.x,S.position.y),A,B);
-          	if(e == 1){ //E is inside
-              if (s == -1){
-              	appendVertexToPolygon(outputList, intersect2D(S,E,A,B));
+          	if(e == 1){ //If Vertex E is inside
+              if (s == -1){ //If vertex S is outside 
+              	appendVertexToPolygon(clipped, intersect2D(S,E,A,B)); // Append the intersection point to clipped poly
               }
-              appendVertexToPolygon(outputList, E);
+              appendVertexToPolygon(clipped, E); // Append the vertex that is inside i.e E  to clipped poly
             }
-          	else if (s == 1){ // S is inside
-              appendVertexToPolygon(outputList, intersect2D(S,E,A,B));
+          	else if (s == 1){ // If vertex S is inside 
+              appendVertexToPolygon(clipped, intersect2D(S,E,A,B)); // Append the intersection point to clipped poly
             }
-          	S=E;
+          	S=E;  // For the next iteration S will be E and E will be incremented to next vertex
 #else
-            appendVertexToPolygon(outputList, getWrappedPolygonVertex(inputList, j));
+            appendVertexToPolygon(clipped, getWrappedPolygonVertex(oldClipped, j));
 #endif
         }
     }
 
     // Copy the last version to the output
-    copyPolygon(result, outputList);
+    copyPolygon(result, clipped);
 }
 
 // Rasterization and culling part
@@ -215,25 +224,25 @@ bool isPointInPolygon(vec2 point, Polygon polygon) {
     if (polygon.vertexCount == 0) return false;
     // Check against each edge of the polygon
     bool rasterise = true;
-  	int r2=-2;
-  	int r=0;
+  	int rPrev=-2;   // Variable to store the result of whether point inside or outside previous Edge 
+  	int rCurrent=0; // Variable to store the result of whether point inside or outside current  Edge 
     for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
         if (i < polygon.vertexCount) {
 #ifdef RASTERIZATION
             // Put your code here
           if(i==0){
-             r = edge(point,polygon.vertices[i],getWrappedPolygonVertex(polygon,polygon.vertexCount-1));            
+             rCurrent = edge(point,polygon.vertices[i],getWrappedPolygonVertex(polygon,polygon.vertexCount-1));            
           }
        	  else{
-            r = edge(point,polygon.vertices[i],polygon.vertices[i-1]);
+            rCurrent = edge(point,polygon.vertices[i],polygon.vertices[i-1]);
        	  }
-          if(r2 == -2){
-            r2 = r;
+          if(rPrev == -2){ // Execution will come here only 1st time for every vertex. Here we set rPrev to rCurrent 
+            rPrev = rCurrent;
           }
           else{
-            if(r2*r>0){
+            if(rPrev*rCurrent > 0){ // point was inside for prev edge and also for current edge, rPrev*rCurrent>0 else <0
       			rasterise = true;
-              	r2=r;
+              	rPrev=rCurrent;
             }
   			else{
     			rasterise = false;
@@ -278,26 +287,41 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
         if (i < polygon.vertexCount) {
 #if defined(INTERPOLATION) || defined(ZBUFFERING)
           // Put your code here
-          Vertex V1,V2;
+          
+          // Temporary Vertex variables to hold values of vertices opposite to current i'th vertex 
+          Vertex V1,V2; 
+          
           V1 = getWrappedPolygonVertex(polygon,i+1);
-          if(i+1 == polygon.vertexCount){
+          
+          // Check the case when (i+2) becomes more than total vertex count
+          if(i+1 == polygon.vertexCount){ 
             V2 = getWrappedPolygonVertex(polygon,1);
 
           }else{
             V2 = getWrappedPolygonVertex(polygon,i+2);
           }
-          float weight = triangleArea(vec2(V1.position.x,V1.position.y) ,vec2(V2.position.x,V2.position.y),point);
-          weightSum = weightSum + weight;
-          depthSum = depthSum+weight*(1.0/polygon.vertices[i].position.z);
+          
+          //Weight for current vertex equals area of triangle formed by the point and vertices opposite to current vertex.
+          float weight = triangleArea(vec2(V1.position.x,V1.position.y) ,vec2(V2.position.x,V2.position.y),point); 
+          
+          // Add weights to calculate total area of traingle 
+          weightSum = weightSum + weight; 
+          
+          // Calculate depthSum from weighted 1/z from every vertex
+          depthSum = depthSum+weight*(1.0/polygon.vertices[i].position.z); 
 
 #else
 #endif
 #ifdef ZBUFFERING
             // Put your code here     
+          
+          //Calculate interpolated vertex co-ordinates
           positionSum= positionSum+weight*polygon.vertices[i].position; 
 #endif
 #ifdef INTERPOLATION
-          colorSum= colorSum + weight*polygon.vertices[i].color;
+          
+          // Calculate interpolated vertex color
+          colorSum= colorSum + weight*polygon.vertices[i].color; 
           
 #endif
         }
@@ -328,6 +352,7 @@ mat4 computeProjectionMatrix() {
 
 #ifdef PROJECTION
     // Put your code here
+  // We use the simplest projection matrix for this exercise as the fov, aspect ratio , near and far planes are not given
   projectionMatrix = mat4(1,0,0,0,
                           0,1,0,0,
                           0,0,1,1,
@@ -344,11 +369,14 @@ mat4 computeViewMatrix(vec3 VRP, vec3 TP, vec3 VUV) {
 
 #ifdef PROJECTION
     // Put your code here
+  	// ViewPositionNormal = target Position - View Referenc3 Position
     vec3 VPN= TP-VRP;
+  	//Calculate u,v and n. Note that u,v,n reperesent the view co-ordinate system axes and are orthogonal to each other
   	vec3 n = normalize(VPN);
   	vec3 u = normalize(cross(VUV,n));
   	vec3 v = cross(n,u);
   	
+  	//The last row of view matrix takes care of the camera translation form (0,0,0) to VRP
   	viewMatrix = mat4(u.x,v.x,n.x,0.0,
                       u.y,v.y,n.y,0.0,
                       u.z,v.z,n.z,0.0,
@@ -373,8 +401,11 @@ vec3 projectVertexPosition(vec3 position) {
   
 #ifdef PROJECTION
     // Put your code here
+  // Applying the view and projection transform to the input vertex which ahs to be projected
    vec4 p2 = projectionMatrix*viewMatrix*vec4(position,1.0);
-  return vec3(p2.x/p2.w,p2.y/p2.w,p2.z/p2.w);
+  // Performing the perspective divide. This step (x/w,y/w,z/w,w/w) make the 4th component of 
+  // homogenous coordinate system 1 again (x',y',z',1) so (x',y',z') forms the projected vertex.
+  return vec3(p2.x/p2.w,p2.y/p2.w,p2.z/p2.w); 				
 #else
     return position;
 #endif
@@ -452,9 +483,9 @@ void drawScene(vec2 point, inout vec3 color) {
     triangles[1].vertices[0].position = vec3(3.0836, -4.3820, 1.9);
     triangles[1].vertices[1].position = vec3(-3.9667, 0.7933, 0.5);
     triangles[1].vertices[2].position = vec3(-4.3714, 8.2286, 1.0);
-    triangles[1].vertices[0].color = vec3(0.1, 0.5, 1.0);
-    triangles[1].vertices[1].color = vec3(1.0, 0.6, 0.1);
-    triangles[1].vertices[2].color = vec3(0.2, 0.6, 1.0);
+    triangles[1].vertices[1].color = vec3(0.1, 0.5, 1.0);
+    triangles[1].vertices[2].color = vec3(1.0, 0.6, 0.1);
+    triangles[1].vertices[0].color = vec3(0.2, 0.6, 1.0);
     triangles[1].vertexCount = 3;
 
     float depth = 10000.0;
