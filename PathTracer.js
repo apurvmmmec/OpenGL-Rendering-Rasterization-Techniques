@@ -15,7 +15,7 @@ function setup()
 		id: `TraceFS`,
 		initialValue: `#define LIGHT
 #define BOUNCE
-//#define THROUGHPUT
+#define THROUGHPUT
 //#define HALTON
 //#define IMPORTANCE_SAMPLING
 //#define AA
@@ -284,6 +284,7 @@ vec3 getReflectance(
 {
 #ifdef THROUGHPUT    
     // Put your code here
+  return material.specular*pow(max(0.0, dot(inDirection, outDirection)), material.glossiness);
 #else
   return vec3(1.0);
 #endif 
@@ -297,6 +298,7 @@ vec3 getGeometricTerm(
 {
 #ifdef THROUGHPUT  
     // Put your code here
+  return vec3(0.5);
 #else
   return vec3(1.0);
 #endif 
@@ -309,12 +311,12 @@ vec3 samplePath(Scene scene, Ray initialRay) {
   
   Ray incomingRay = initialRay;
   vec3 throughput = vec3(1.0);
+  
   for(int i = 0; i < maxPathLength; i++) {
     HitInfo hitInfo = intersectScene(scene, incomingRay, 0.001, 10000.0);  
 
     if(!hitInfo.hit) return result;
-
-    result += throughput * getEmission(hitInfo.material, hitInfo. normal);
+    result += throughput * getEmission(hitInfo.material, hitInfo.normal);
 	
     Ray outgoingRay;
     
@@ -324,6 +326,7 @@ vec3 samplePath(Scene scene, Ray initialRay) {
     outgoingRay.direction = randomDirection(1);
     outgoingRay.origin = hitInfo.position;
     HitInfo hitInfo1 = intersectScene(scene, outgoingRay, 0.001, 10000.0);  
+   
 
     if(!hitInfo1.hit) return result;
 
@@ -338,6 +341,12 @@ vec3 samplePath(Scene scene, Ray initialRay) {
 
 #ifdef THROUGHPUT    
     // Do proper throughput computation here
+    vec3 hitToLight = scene.spheres[1].position - hitInfo1.position;
+    vec3 lightDirection = normalize(hitToLight);
+  	vec3 viewDirection = normalize(hitInfo1.position - incomingRay.origin);
+  	vec3 reflectedDirection = reflect(viewDirection, hitInfo1.normal);
+    vec3 phong = getReflectance(hitInfo1.material,hitInfo1.normal,lightDirection, reflectedDirection);
+	throughput = phong;
 #else
     throughput *= 0.1;    
 #endif
