@@ -4,8 +4,8 @@ function setup()
 	UI.tabs = [];
 	UI.titleLong = 'Path Tracer';
 	UI.titleShort = 'PathTracer';
-	UI.renderWidth = 256;
-	UI.renderHeight = 128;
+	UI.renderWidth = 2048;
+	UI.renderHeight = 1024;
 
 	UI.tabs.push(
 		{
@@ -284,7 +284,10 @@ vec3 getReflectance(
 {
 #ifdef THROUGHPUT    
     // Put your code here
-  return material.specular*pow(max(0.0, dot(inDirection, outDirection)), material.glossiness);
+  vec3 perfSpecDir = reflect(inDirection,normal);
+  vec3 spec = material.specular * ( (2.0 + material.glossiness) / (2.0*3.1415) ) * pow(max(0.0, dot(outDirection, perfSpecDir)), material.glossiness)*max(0.0, dot(outDirection, normal));
+  vec3 diff =material.diffuse*max(0.0, dot(outDirection, normal));
+  return spec+diff;
 #else
   return vec3(1.0);
 #endif 
@@ -325,13 +328,8 @@ vec3 samplePath(Scene scene, Ray initialRay) {
    // Put your code to compute the next ray here
     outgoingRay.direction = randomDirection(1);
     outgoingRay.origin = hitInfo.position;
-    HitInfo hitInfo1 = intersectScene(scene, outgoingRay, 0.001, 10000.0);  
-   
-
-    if(!hitInfo1.hit) return result;
-
-    result += throughput * getEmission(hitInfo1.material, hitInfo1. normal);
-	
+    incomingRay = outgoingRay;
+    
 #endif    
     
     float probability = 1.0;
@@ -341,12 +339,15 @@ vec3 samplePath(Scene scene, Ray initialRay) {
 
 #ifdef THROUGHPUT    
     // Do proper throughput computation here
-    vec3 hitToLight = scene.spheres[1].position - hitInfo1.position;
-    vec3 lightDirection = normalize(hitToLight);
-  	vec3 viewDirection = normalize(hitInfo1.position - incomingRay.origin);
-  	vec3 reflectedDirection = reflect(viewDirection, hitInfo1.normal);
-    vec3 phong = getReflectance(hitInfo1.material,hitInfo1.normal,lightDirection, reflectedDirection);
-	throughput = phong;
+    //vec3 hitToLight = scene.spheres[1].position - hitInfo1.position;
+    //vec3 lightDirection = normalize(hitToLight);
+  	//vec3 viewDirection = normalize(hitInfo1.position - incomingRay.origin);
+  	
+    vec3 reflectedDirection = reflect(outgoingRay.direction, hitInfo.normal);
+    vec3 phong = getReflectance(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
+    //vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
+    
+	throughput = throughput*phong;
 #else
     throughput *= 0.1;    
 #endif
