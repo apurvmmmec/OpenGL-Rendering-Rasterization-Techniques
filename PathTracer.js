@@ -4,8 +4,10 @@ function setup()
 	UI.tabs = [];
 	UI.titleLong = 'Path Tracer';
 	UI.titleShort = 'PathTracer';
-	UI.renderWidth = 2048;
-	UI.renderHeight = 1024;
+	UI.numFrames = 1000;
+	UI.maxFPS = 24;
+	UI.renderWidth = 1024;
+	UI.renderHeight = 512;
 
 	UI.tabs.push(
 		{
@@ -16,7 +18,7 @@ function setup()
 		initialValue: `#define LIGHT
 #define BOUNCE
 #define THROUGHPUT
-//#define HALTON
+#define HALTON
 //#define IMPORTANCE_SAMPLING
 //#define AA
 
@@ -214,6 +216,19 @@ int prime(int index) {
 float halton(int sampleIndex, int dimensionIndex) {
 #ifdef HALTON  
   // Put your implementation of halton here
+  int b = dimensionIndex;
+  int n0=sampleIndex;
+  float hn =0.0;
+  float f = 1.0/float(b);
+  
+    float n1 = floor(1.0/float(b));
+    float r =float(n0)-n1*float(b);
+    hn = hn+f*r;
+    f=f/float(b);
+    n0=int(n1);
+  
+  return hn;
+  
 #else
   return 0.0;
 #endif
@@ -227,6 +242,8 @@ uniform int baseSampleIndex;
 float sample(int dimensionIndex) {
 #ifdef HALTON  
   // Put your code here
+  int pDIndex= prime(dimensionIndex);
+  return halton(baseSampleIndex,pDIndex);
 #else
   // Replace the line below to use the Halton sequence for variance reduction
   return uniformRandom();
@@ -252,10 +269,10 @@ vec2 sample2(int dimensionIndex) {
 vec3 randomDirection(int dimensionIndex) {
 #ifdef BOUNCE
   // Put your code to compute a random direction in 3D here
-  float ep0=sample(dimensionIndex);
-  float ep1=sample(dimensionIndex);
+  float ep0=sample(PATH_SAMPLE_DIMENSION+2*dimensionIndex);
+  float ep1=sample(PATH_SAMPLE_DIMENSION+2*dimensionIndex+1);
   float theta = acos(2.0*ep0-1.0);
-  float phi = 2.0*ep1*2.0*3.1415;
+  float phi = ep1*2.0*3.1415;
   float x = sin(theta)*cos(phi);
   float y = sin(theta)*sin(phi);
   float z =cos(theta);
@@ -285,9 +302,9 @@ vec3 getReflectance(
 #ifdef THROUGHPUT    
     // Put your code here
   vec3 perfSpecDir = reflect(inDirection,normal);
-  vec3 spec = material.specular * ( (2.0 + material.glossiness) / (2.0*3.1415) ) * pow(max(0.0, dot(outDirection, perfSpecDir)), material.glossiness)*max(0.0, dot(outDirection, normal));
-  vec3 diff =material.diffuse*max(0.0, dot(outDirection, normal));
-  return spec+diff;
+  vec3 spec = material.specular * ( (2.0 + material.glossiness) / (2.0*M_PI) ) * pow(max(0.0, dot(outDirection, perfSpecDir)), material.glossiness);
+  vec3 diffused = material.diffuse /M_PI;
+  return spec+diffused;
 #else
   return vec3(1.0);
 #endif 
@@ -301,7 +318,7 @@ vec3 getGeometricTerm(
 {
 #ifdef THROUGHPUT  
     // Put your code here
-  return vec3(0.5);
+  return vec3(max(0.0, dot(outDirection, normal)));
 #else
   return vec3(1.0);
 #endif 
@@ -326,28 +343,24 @@ vec3 samplePath(Scene scene, Ray initialRay) {
 
 #ifdef BOUNCE
    // Put your code to compute the next ray here
-    outgoingRay.direction = randomDirection(1);
+    outgoingRay.direction = randomDirection(i);
     outgoingRay.origin = hitInfo.position;
-    incomingRay = outgoingRay;
+    
     
 #endif    
     
-    float probability = 1.0;
+    float probability = 1.0/M_PI;
 #ifdef IMPORTANCE_SAMPLING
 	// Put your code to importance-sample for the geometric term here
 #endif
 
 #ifdef THROUGHPUT    
     // Do proper throughput computation here
-    //vec3 hitToLight = scene.spheres[1].position - hitInfo1.position;
-    //vec3 lightDirection = normalize(hitToLight);
-  	//vec3 viewDirection = normalize(hitInfo1.position - incomingRay.origin);
   	
-    vec3 reflectedDirection = reflect(outgoingRay.direction, hitInfo.normal);
     vec3 phong = getReflectance(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
-    //vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
+    vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
     
-	throughput = throughput*phong;
+	throughput = throughput*phong*geom;
 #else
     throughput *= 0.1;    
 #endif
@@ -356,6 +369,7 @@ vec3 samplePath(Scene scene, Ray initialRay) {
     
 #ifdef BOUNCE
     // Put some handling of the next and the current ray here
+    incomingRay = outgoingRay;
 #endif    
   }  
   return result;
