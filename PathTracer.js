@@ -4,8 +4,6 @@ function setup()
 	UI.tabs = [];
 	UI.titleLong = 'Path Tracer';
 	UI.titleShort = 'PathTracer';
-	UI.numFrames = 1000;
-	UI.maxFPS = 24;
 	UI.renderWidth = 256;
 	UI.renderHeight = 128;
 
@@ -19,7 +17,7 @@ function setup()
 #define BOUNCE
 #define THROUGHPUT
 #define HALTON
-//#define IMPORTANCE_SAMPLING
+#define IMPORTANCE_SAMPLING
 #define AA
 
 // Thanks to Iliyan Georgiev from Solid Angle for explaining proper housekeeping of sample dimensions in ranomdized Quasi-Monte Carlo
