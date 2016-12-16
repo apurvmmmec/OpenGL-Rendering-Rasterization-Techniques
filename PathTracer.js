@@ -6,8 +6,8 @@ function setup()
 	UI.titleShort = 'PathTracer';
 	UI.numFrames = 1000;
 	UI.maxFPS = 24;
-	UI.renderWidth = 1024;
-	UI.renderHeight = 512;
+	UI.renderWidth = 256;
+	UI.renderHeight = 128;
 
 	UI.tabs.push(
 		{
@@ -19,7 +19,7 @@ function setup()
 #define BOUNCE
 #define THROUGHPUT
 #define HALTON
-#define IMPORTANCE_SAMPLING
+//#define IMPORTANCE_SAMPLING
 #define AA
 
 // Thanks to Iliyan Georgiev from Solid Angle for explaining proper housekeeping of sample dimensions in ranomdized Quasi-Monte Carlo
@@ -197,7 +197,7 @@ int prime(int index) {
   if(index == 0) return 2;
   if(index == 1) return 3;
   if(index == 2) return 5;
-  if(index == 3) return 6;
+  if(index == 3) return 7;
   if(index == 4) return 11;
   if(index == 5) return 13;
   if(index == 6) return 17;
@@ -216,39 +216,23 @@ int prime(int index) {
 float halton(int sampleIndex, int dimensionIndex) {
 #ifdef HALTON  
   // Put your implementation of halton here
-  int b = dimensionIndex;
+  int base = dimensionIndex;
   int n =sampleIndex;
-  int n0=n;
-  int n1 = n0/b;
-  int c=0;
-  float hn =0.0;
-  float f = 1.0/float(b);
-  for(int i=0;i<10;i++){
-    if(n0>0){
-      if(c==0){
-        if(n0==n){
-          n1 = int(floor(float(n0)/float(b)));
-          int r = n0 - n1*b;
-          hn = hn+f*float(r);
-          f=f/float(b);
-          n0=n1;
-          c=c+1;
-        }
-      }
-      else{
-        if(n0==n1){
-          n1 = int(floor(float(n0)/float(b)));
-          int r = n0 - n1*b;
-          hn = hn+f*float(r);
-          f=f/float(b);
-          n0=n1;
-        }
-      }
-    }
-  }
     
-  
-  return hn;
+  float haltNo = 0.0;
+  float f = 1.0;
+  //int i = sampleIndex;
+  for(int a=0;a<100;a++)
+  {
+    if(n<=0){
+        return haltNo;
+    }
+    	f=f/float(base);
+        int imodb = n-(base*int(n/base));
+        haltNo =haltNo+ f*float(imodb);
+        n=int(n/base);
+   }  
+  return haltNo;
   
 #else
   return 0.0;
@@ -264,7 +248,7 @@ float sample(int dimensionIndex) {
 #ifdef HALTON  
   // Put your code here
   int pDIndex= prime(dimensionIndex);
-  return fract(halton(baseSampleIndex,pDIndex)+uniformRandom());
+  return fract(halton(baseSampleIndex,pDIndex)+pixelSeed(dimensionIndex));
 #else
   // Replace the line below to use the Halton sequence for variance reduction
   return uniformRandom();
@@ -290,10 +274,11 @@ vec2 sample2(int dimensionIndex) {
 vec3 randomDirection(int dimensionIndex) {
 #ifdef BOUNCE
   // Put your code to compute a random direction in 3D here
-  float ep0=sample(PATH_SAMPLE_DIMENSION+2*dimensionIndex);
-  float ep1=sample(PATH_SAMPLE_DIMENSION+2*dimensionIndex+1);
+  vec2 ep = sample2(dimensionIndex);
+  float ep0=ep[0];
+  float ep1=ep[1];
   float theta = acos(2.0*ep0-1.0);
-  float phi = ep1*2.0*3.1415;
+  float phi = ep1*2.0*M_PI;
   float x = sin(theta)*cos(phi);
   float y = sin(theta)*sin(phi);
   float z =cos(theta);
@@ -324,7 +309,7 @@ vec3 getReflectance(
     // Put your code here
   vec3 perfSpecDir = reflect(inDirection,normal);
   vec3 spec = material.specular * ( (2.0 + material.glossiness) / (2.0*M_PI) ) * pow(max(0.0, dot(outDirection, perfSpecDir)), material.glossiness);
-  vec3 diffused = material.diffuse /M_PI;
+  vec3 diffused = material.diffuse /(M_PI);
   return spec+diffused;
 #else
   return vec3(1.0);
@@ -357,36 +342,33 @@ vec3 samplePath(Scene scene, Ray initialRay) {
     HitInfo hitInfo = intersectScene(scene, incomingRay, 0.001, 10000.0);  
 
     if(!hitInfo.hit) return result;
-    result += throughput * getEmission(hitInfo.material, hitInfo.normal);
-	
-    Ray outgoingRay;
-    
+    result += throughput * getEmission(hitInfo.material, hitInfo.normal);	
+    Ray outgoingRay;    
 
 #ifdef BOUNCE
    // Put your code to compute the next ray here
-    outgoingRay.direction = randomDirection(i);
+    outgoingRay.direction = randomDirection(PATH_SAMPLE_DIMENSION+2*i+0);
     outgoingRay.origin = hitInfo.position;
     
     
 #endif    
     
-    float probability = 1.0/M_PI;
+    float probability = 1.0/(4.0*M_PI);
 #ifdef IMPORTANCE_SAMPLING
 	// Put your code to importance-sample for the geometric term here
-    float alpha = max(0.0,dot(outgoingRay.direction,hitInfo.normal));
-    if(alpha<=0.0){
-      outgoingRay.direction=vec3(0);
-    }
+     if(dot(outgoingRay.direction,hitInfo.normal)<0.0){
+       outgoingRay.direction=-outgoingRay.direction;
+       probability=probability*2.0;
+     }
+   
 #endif
 
 #ifdef THROUGHPUT    
     // Do proper throughput computation here
-  	if(outgoingRay.direction != vec3(0.0)){
     vec3 phong = getReflectance(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
     vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
-    
+
 	throughput = throughput*phong*geom;
-  }
 #else
     throughput *= 0.1;    
 #endif
@@ -424,24 +406,21 @@ vec3 colorForFragment(Scene scene, vec2 fragCoord) {
   	initRandomSequence(); 
   
 #ifdef AA  
-  	// Add anti aliasing code here
+  // Add anti aliasing code here
+  
   vec2 sensorMin = vec2(-1, -0.5);
   vec2 sensorMax = vec2(1, 0.5);
   vec2 pixelSize = (sensorMax - sensorMin) / vec2(resolution);
   float sx = fragCoord.x- pixelSize.x/2.0 + sample(ANTI_ALIAS_SAMPLE_DIMENSION);
   float sy = fragCoord.y- pixelSize.x/2.0 + sample(ANTI_ALIAS_SAMPLE_DIMENSION+1);
-  /*if(sx>(fragCoord.x+ pixelSize.x/2.0)){
-    sx = fragCoord.x+ pixelSize.x/2.0 ;
-  }
-  if(sy>(fragCoord.y+ pixelSize.y/2.0)){
-    sy = fragCoord.y+ pixelSize.y/2.0 ;
-  }*/
+  
   vec2 sampleCoord = vec2(sx,sy);
 #else
 	vec2 sampleCoord = fragCoord;
+  
 #endif
-
-    return samplePath(scene, getFragCoordRay(sampleCoord));
+return samplePath(scene, getFragCoordRay(sampleCoord));
+    
 }
 
 
@@ -460,7 +439,7 @@ void loadScene1(inout Scene scene) {
   scene.spheres[1].material.diffuse = vec3(0.0);
   scene.spheres[1].material.specular = vec3(0.0);
   scene.spheres[1].material.glossiness = 10.0;
-  scene.spheres[1].material.emission = 30.0*vec3(0.9,0.8,0.5);
+  scene.spheres[1].material.emission = 10.0*vec3(0.9,0.8,0.5);
 
   scene.planes[0].normal = vec3(0, 1, 0);
   scene.planes[0].d = 4.5;
