@@ -18,9 +18,9 @@ function setup()
 		initialValue: `#define LIGHT
 #define BOUNCE
 #define THROUGHPUT
-//#define HALTON
-//#define IMPORTANCE_SAMPLING
-//#define AA
+#define HALTON
+#define IMPORTANCE_SAMPLING
+#define AA
 
 // Thanks to Iliyan Georgiev from Solid Angle for explaining proper housekeeping of sample dimensions in ranomdized Quasi-Monte Carlo
 
@@ -373,17 +373,20 @@ vec3 samplePath(Scene scene, Ray initialRay) {
     float probability = 1.0/M_PI;
 #ifdef IMPORTANCE_SAMPLING
 	// Put your code to importance-sample for the geometric term here
-    vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
-    outgoingRay.direction = -outgoingRay.direction + normalize(hitInfo.normal*(geom));
+    float alpha = max(0.0,dot(outgoingRay.direction,hitInfo.normal));
+    if(alpha<=0.0){
+      outgoingRay.direction=vec3(0);
+    }
 #endif
 
 #ifdef THROUGHPUT    
     // Do proper throughput computation here
-  	
+  	if(outgoingRay.direction != vec3(0.0)){
     vec3 phong = getReflectance(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
     vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
     
 	throughput = throughput*phong*geom;
+  }
 #else
     throughput *= 0.1;    
 #endif
