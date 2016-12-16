@@ -18,7 +18,7 @@ function setup()
 		initialValue: `#define LIGHT
 #define BOUNCE
 #define THROUGHPUT
-#define HALTON
+//#define HALTON
 //#define IMPORTANCE_SAMPLING
 //#define AA
 
@@ -217,15 +217,36 @@ float halton(int sampleIndex, int dimensionIndex) {
 #ifdef HALTON  
   // Put your implementation of halton here
   int b = dimensionIndex;
-  int n0=sampleIndex;
+  int n =sampleIndex;
+  int n0=n;
+  int n1 = n0/b;
+  int c=0;
   float hn =0.0;
   float f = 1.0/float(b);
-  
-    float n1 = floor(1.0/float(b));
-    float r =float(n0)-n1*float(b);
-    hn = hn+f*r;
-    f=f/float(b);
-    n0=int(n1);
+  for(int i=0;i<10;i++){
+    if(n0>0){
+      if(c==0){
+        if(n0==n){
+          n1 = int(floor(float(n0)/float(b)));
+          int r = n0 - n1*b;
+          hn = hn+f*float(r);
+          f=f/float(b);
+          n0=n1;
+          c=c+1;
+        }
+      }
+      else{
+        if(n0==n1){
+          n1 = int(floor(float(n0)/float(b)));
+          int r = n0 - n1*b;
+          hn = hn+f*float(r);
+          f=f/float(b);
+          n0=n1;
+        }
+      }
+    }
+  }
+    
   
   return hn;
   
@@ -243,7 +264,7 @@ float sample(int dimensionIndex) {
 #ifdef HALTON  
   // Put your code here
   int pDIndex= prime(dimensionIndex);
-  return halton(baseSampleIndex,pDIndex);
+  return fract(halton(baseSampleIndex,pDIndex)+uniformRandom());
 #else
   // Replace the line below to use the Halton sequence for variance reduction
   return uniformRandom();
@@ -352,6 +373,8 @@ vec3 samplePath(Scene scene, Ray initialRay) {
     float probability = 1.0/M_PI;
 #ifdef IMPORTANCE_SAMPLING
 	// Put your code to importance-sample for the geometric term here
+    vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
+    outgoingRay.direction = -outgoingRay.direction + normalize(hitInfo.normal*(geom));
 #endif
 
 #ifdef THROUGHPUT    
@@ -399,6 +422,18 @@ vec3 colorForFragment(Scene scene, vec2 fragCoord) {
   
 #ifdef AA  
   	// Add anti aliasing code here
+  vec2 sensorMin = vec2(-1, -0.5);
+  vec2 sensorMax = vec2(1, 0.5);
+  vec2 pixelSize = (sensorMax - sensorMin) / vec2(resolution);
+  float sx = fragCoord.x- pixelSize.x/2.0 + sample(ANTI_ALIAS_SAMPLE_DIMENSION);
+  float sy = fragCoord.y- pixelSize.x/2.0 + sample(ANTI_ALIAS_SAMPLE_DIMENSION+1);
+  /*if(sx>(fragCoord.x+ pixelSize.x/2.0)){
+    sx = fragCoord.x+ pixelSize.x/2.0 ;
+  }
+  if(sy>(fragCoord.y+ pixelSize.y/2.0)){
+    sy = fragCoord.y+ pixelSize.y/2.0 ;
+  }*/
+  vec2 sampleCoord = vec2(sx,sy);
 #else
 	vec2 sampleCoord = fragCoord;
 #endif
