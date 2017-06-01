@@ -10,4 +10,4 @@ This repo shows the webGL code for different types of rendering techniques right
 
 # Quasi Monte Carlo Path Tracing/ Gobal Illumination Output
 
-![alt tag](https://github.com/apurvmmmec/CG-Rendering-Techniques/blob/master/QuasiMonteCarlo_PathTracert.png)
+![alt tag](https://github.com/apurvmmmec/CG-Rendering-Techniques/blob/master/QuasiMonteCarlo_PathTracer.png)
