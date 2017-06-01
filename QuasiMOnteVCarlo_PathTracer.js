@@ -1,21 +1,4 @@
-function setup()
-{
-	UI = {};
-	UI.tabs = [];
-	UI.titleLong = 'Path Tracer';
-	UI.titleShort = 'PathTracer';
-	UI.numFrames = 2000;
-	UI.maxFPS = 24;
-	UI.renderWidth = 512;
-	UI.renderHeight = 256;
-
-	UI.tabs.push(
-		{
-		visible: true,
-		type: `x-shader/x-fragment`,
-		title: `Raytracing`,
-		id: `TraceFS`,
-		initialValue: `#define LIGHT
+#define LIGHT
 #define BOUNCE
 #define THROUGHPUT
 #define HALTON
@@ -87,16 +70,16 @@ HitInfo intersectSphere(Ray ray, Sphere sphere) {
     float D = b * b - 4.0 * a * c;
     if (D > 0.0)
     {
-		float t0 = (-b - sqrt(D)) / (2.0 * a);
-		float t1 = (-b + sqrt(D)) / (2.0 * a);
-      	float t = min(t0, t1);
-      	vec3 hitPosition = ray.origin + t * ray.direction;
+    float t0 = (-b - sqrt(D)) / (2.0 * a);
+    float t1 = (-b + sqrt(D)) / (2.0 * a);
+        float t = min(t0, t1);
+        vec3 hitPosition = ray.origin + t * ray.direction;
         return HitInfo(
-          	true,
-          	t,
-          	hitPosition,
-          	normalize(hitPosition - sphere.position),
-          	sphere.material);
+            true,
+            t,
+            hitPosition,
+            normalize(hitPosition - sphere.position),
+            sphere.material);
     }
     return getEmptyHit();
 }
@@ -105,11 +88,11 @@ HitInfo intersectPlane(Ray ray, Plane plane) {
   float t = -(dot(ray.origin, plane.normal) + plane.d) / dot(ray.direction, plane.normal);
   vec3 hitPosition = ray.origin + t * ray.direction;
   return HitInfo(
-	true,
-	t,
-	hitPosition,
-	normalize(plane.normal),
-	plane.material); 
+  true,
+  t,
+  hitPosition,
+  normalize(plane.normal),
+  plane.material); 
     return getEmptyHit();
 }
 
@@ -121,15 +104,15 @@ HitInfo intersectScene(Scene scene, Ray ray, float tMin, float tMax)
 {
     HitInfo best_hit_info;
     best_hit_info.t = tMax;
-  	best_hit_info.hit = false;
+    best_hit_info.hit = false;
 
     for (int i = 0; i < planeCount; ++i) {
         Plane plane = scene.planes[i];
         HitInfo hit_info = intersectPlane(ray, plane);
 
-        if(	hit_info.hit && 
-           	hit_info.t < best_hit_info.t &&
-           	hit_info.t > tMin)
+        if( hit_info.hit && 
+            hit_info.t < best_hit_info.t &&
+            hit_info.t > tMin)
         {
             best_hit_info = hit_info;
         }
@@ -139,9 +122,9 @@ HitInfo intersectScene(Scene scene, Ray ray, float tMin, float tMax)
         Sphere sphere = scene.spheres[i];
         HitInfo hit_info = intersectSphere(ray, sphere);
 
-        if(	hit_info.hit && 
-           	hit_info.t < best_hit_info.t &&
-           	hit_info.t > tMin)
+        if( hit_info.hit && 
+            hit_info.t < best_hit_info.t &&
+            hit_info.t > tMin)
         {
             best_hit_info = hit_info;
         }
@@ -152,7 +135,7 @@ HitInfo intersectScene(Scene scene, Ray ray, float tMin, float tMax)
 
 // Converts a random integer in 15 bits to a float in (0, 1)
 float randomIntegerToRandomFloat(int i) {
-	return float(i) / 32768.0;
+  return float(i) / 32768.0;
 }
 
 // Returns a random integer for every pixel and dimension that remains the same in all iterations
@@ -164,7 +147,7 @@ int pixelIntegerSeed(int dimensionIndex) {
 
 // Returns a random float for every pixel that remains the same in all iterations
 float pixelSeed(int dimensionIndex) {
-  	return randomIntegerToRandomFloat(pixelIntegerSeed(dimensionIndex));
+    return randomIntegerToRandomFloat(pixelIntegerSeed(dimensionIndex));
 }
 
 // The global random seed of this iteration
@@ -182,13 +165,13 @@ int mod(int x, int y) {
 
 // Returns the next integer in a pseudo-random sequence
 int rand() {
-  	randomSeed = randomSeed * 1103515245 + 12345;   
-	return mod(randomSeed / 65536, 32768);
+    randomSeed = randomSeed * 1103515245 + 12345;   
+  return mod(randomSeed / 65536, 32768);
 }
 
 // Returns the next float in this pixels pseudo-random sequence
 float uniformRandom() {
-	return randomIntegerToRandomFloat(rand());
+  return randomIntegerToRandomFloat(rand());
 }
 
 // Returns the ith prime number for the first 20 
@@ -294,8 +277,8 @@ vec3 getEmission(Material material, vec3 normal) {
     // Put your code here
   return material.emission;
 #else
-  	// This is wrong. It just returns the diffuse color so that you see something to be sure it is working.
-  	return material.diffuse;
+    // This is wrong. It just returns the diffuse color so that you see something to be sure it is working.
+    return material.diffuse;
 #endif
 }
 
@@ -345,7 +328,7 @@ vec3 samplePath(Scene scene, Ray initialRay) {
     HitInfo hitInfo = intersectScene(scene, incomingRay, 0.001, 10000.0);  
 
     if(!hitInfo.hit) return result;
-    result += throughput * getEmission(hitInfo.material, hitInfo.normal);	
+    result += throughput * getEmission(hitInfo.material, hitInfo.normal); 
     Ray outgoingRay;    
 
 #ifdef BOUNCE
@@ -361,7 +344,7 @@ vec3 samplePath(Scene scene, Ray initialRay) {
     // So probability= 1/surface area of unit sphere = 1/4*pi
     float probability = 1.0/(4.0*M_PI);
 #ifdef IMPORTANCE_SAMPLING
-	// Put your code to importance-sample for the geometric term here
+  // Put your code to importance-sample for the geometric term here
     // We check for the rays which have angle greater tha 90 degree with the normal.
     // We invert the direction of that ray , so that it goes towards brighter area.
     // We also increase the probability as now the probability of every ray to hit the upper hemisphere 
@@ -379,7 +362,7 @@ vec3 samplePath(Scene scene, Ray initialRay) {
     vec3 ref = getReflectance(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
     vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
 
-	throughput = throughput*ref*geom;
+  throughput = throughput*ref*geom;
 #else
     throughput *= 0.1;    
 #endif
@@ -397,24 +380,24 @@ vec3 samplePath(Scene scene, Ray initialRay) {
 uniform ivec2 resolution;
 Ray getFragCoordRay(vec2 fragCoord) {
   
-  	float sensorDistance = 1.0;
-  	vec3 origin = vec3(0, 0, sensorDistance);
-  	vec2 sensorMin = vec2(-1, -0.5);
-  	vec2 sensorMax = vec2(1, 0.5);
-  	vec2 pixelSize = (sensorMax - sensorMin) / vec2(resolution);
+    float sensorDistance = 1.0;
+    vec3 origin = vec3(0, 0, sensorDistance);
+    vec2 sensorMin = vec2(-1, -0.5);
+    vec2 sensorMax = vec2(1, 0.5);
+    vec2 pixelSize = (sensorMax - sensorMin) / vec2(resolution);
     vec3 direction = normalize(vec3(sensorMin + pixelSize * fragCoord, -sensorDistance));
   
-  	float apertureSize = 0.0;
-  	float focalPlane = 100.0;
-  	vec3 sensorPosition = origin + focalPlane * direction;  
-  	origin.xy += apertureSize * (sample2(LENS_SAMPLE_DIMENSION) - vec2(0.5));  
-  	direction = normalize(sensorPosition - origin);
+    float apertureSize = 0.0;
+    float focalPlane = 100.0;
+    vec3 sensorPosition = origin + focalPlane * direction;  
+    origin.xy += apertureSize * (sample2(LENS_SAMPLE_DIMENSION) - vec2(0.5));  
+    direction = normalize(sensorPosition - origin);
   
-  	return Ray(origin, direction);
+    return Ray(origin, direction);
 }
 
 vec3 colorForFragment(Scene scene, vec2 fragCoord) {      
-  	initRandomSequence(); 
+    initRandomSequence(); 
   
 #ifdef AA  
   // Add anti aliasing code here
@@ -435,7 +418,7 @@ vec3 colorForFragment(Scene scene, vec2 fragCoord) {
     
   vec2 sampleCoord = vec2(sx,sy);
 #else
-	vec2 sampleCoord = fragCoord;
+  vec2 sampleCoord = fragCoord;
   
 #endif
 return samplePath(scene, getFragCoordRay(sampleCoord));
@@ -488,12 +471,12 @@ void loadScene2(inout Scene scene) {
       Material(vec3(0), vec3(0.8, 0.9, 0.2), vec3(1.0), 10.0);
 
     scene.planes[0].normal = vec3(0, 1, 0);
-  	scene.planes[0].d = 4.5;
+    scene.planes[0].d = 4.5;
     scene.planes[0].material = 
       Material(vec3(0.0), vec3(0.8, 0.5, 0.2), vec3(1.0), 50.0);
 
     scene.planes[1].normal = vec3(1, -1, 1);
-  	scene.planes[1].d = 80.0;
+    scene.planes[1].d = 80.0;
     scene.planes[1].material = 
       Material(vec3(2.0), vec3(0.5, 0.8, 0.2), vec3(0.0), 5.0);  
 }
@@ -502,29 +485,29 @@ void loadScene3(inout Scene scene) {
     scene.spheres[0].position = vec3(1, -2, -12);
     scene.spheres[0].radius = 3.0;
     scene.spheres[0].material.emission =vec3(0.0);
-  	scene.spheres[0].material.diffuse = vec3(0.9, 0.9, 0.2);
-  	scene.spheres[0].material.specular = vec3(1.0);
-  	scene.spheres[0].material.glossiness = 20.0;
+    scene.spheres[0].material.diffuse = vec3(0.9, 0.9, 0.2);
+    scene.spheres[0].material.specular = vec3(1.0);
+    scene.spheres[0].material.glossiness = 20.0;
 
     scene.spheres[1].position = vec3(-4, -1, -6);
     scene.spheres[1].radius = 3.0;
     scene.spheres[1].material.emission =vec3(0.0);
-  	scene.spheres[1].material.diffuse = vec3(0.2, 0.9, 0.9);
-  	scene.spheres[1].material.specular = vec3(1.0);
-  	scene.spheres[1].material.glossiness = 20.0;
+    scene.spheres[1].material.diffuse = vec3(0.2, 0.9, 0.9);
+    scene.spheres[1].material.specular = vec3(1.0);
+    scene.spheres[1].material.glossiness = 20.0;
 
     scene.planes[0].normal = vec3(0, 1, 0);
-  	scene.planes[0].d = 4.5;
+    scene.planes[0].d = 4.5;
     scene.planes[0].material.emission =vec3(0.0);
-  	scene.planes[0].material.diffuse = vec3(0.8, 0.5, 0.2);
-  	scene.planes[0].material.specular = vec3(1.0);
-  	scene.planes[0].material.glossiness = 50.0;
+    scene.planes[0].material.diffuse = vec3(0.8, 0.5, 0.2);
+    scene.planes[0].material.specular = vec3(1.0);
+    scene.planes[0].material.glossiness = 50.0;
 
     scene.planes[1].normal = vec3(1, -1, 1);
-  	scene.planes[1].d = 80.0;
- 	scene.planes[1].material.emission =vec3(2.0);
-  	scene.planes[1].material.diffuse = vec3(0.5, 0.8, 0.2);
-  	scene.planes[1].material.specular = vec3(0.0);
+    scene.planes[1].d = 80.0;
+  scene.planes[1].material.emission =vec3(2.0);
+    scene.planes[1].material.diffuse = vec3(0.5, 0.8, 0.2);
+    scene.planes[1].material.specular = vec3(0.0);
 }
 */
 
@@ -536,245 +519,4 @@ void main() {
   // compute color for fragment
   gl_FragColor.rgb = colorForFragment(scene, gl_FragCoord.xy);
   gl_FragColor.a = 1.0;
-}
-`,
-		description: ``,
-		wrapFunctionStart: ``,
-		wrapFunctionEnd: ``
-	});
-
-	UI.tabs.push(
-		{
-		visible: true,
-		type: `x-shader/x-fragment`,
-		title: `Tonemapping`,
-		id: `CopyFS`,
-		initialValue: `precision highp float;
-
-uniform sampler2D radianceTexture;
-uniform int sampleCount;
-uniform ivec2 resolution;
-
-vec3 tonemap(vec3 color, float maxLuminance, float gamma) {
-	float luminance = color.g;
-	//float scale =  luminance /  maxLuminance;
-	float scale = 1.0;//luminance / (maxLuminance * luminance + 0.001);
-  	return max(vec3(0.0), pow(scale * color, vec3(1.0 / gamma)));
-}
-
-void main(void) {
-  vec3 texel = texture2D(radianceTexture, gl_FragCoord.xy / vec2(resolution)).rgb;
-  vec3 radiance = texel / float(sampleCount);
-  gl_FragColor.rgb = tonemap(radiance, 0.2, 2.2);
-  gl_FragColor.a = 1.0;
-}
-`,
-		description: ``,
-		wrapFunctionStart: ``,
-		wrapFunctionEnd: ``
-	});
-
-	UI.tabs.push(
-		{
-		visible: false,
-		type: `x-shader/x-vertex`,
-		title: ``,
-		id: `VS`,
-		initialValue: `
-	attribute vec3 position;
-	void main(void) {
-		gl_Position = vec4(position, 1.0);
-	}
-`,
-		description: ``,
-		wrapFunctionStart: ``,
-		wrapFunctionEnd: ``
-	});
-
-	 return UI; 
-}//!setup
-
-
-function getShader(gl, id) {
-
-		gl.getExtension('OES_texture_float');
-		//alert(gl.getSupportedExtensions());
-
-	var shaderScript = document.getElementById(id);
-	if (!shaderScript) {
-		return null;
-	}
-
-	var str = "";
-	var k = shaderScript.firstChild;
-	while (k) {
-		if (k.nodeType == 3) {
-			str += k.textContent;
-		}
-		k = k.nextSibling;
-	}
-
-	var shader;
-	if (shaderScript.type == "x-shader/x-fragment") {
-		shader = gl.createShader(gl.FRAGMENT_SHADER);
-	} else if (shaderScript.type == "x-shader/x-vertex") {
-		shader = gl.createShader(gl.VERTEX_SHADER);
-	} else {
-		return null;
-	}
-
-	gl.shaderSource(shader, str);
-	gl.compileShader(shader);
-
-	if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-		alert(gl.getShaderInfoLog(shader));
-		return null;
-	}
-
-	return shader;
-}
-
-function RaytracingDemo() {
-}
-
-function initShaders() {
-
-	traceProgram = gl.createProgram();
-	gl.attachShader(traceProgram, getShader(gl, "VS"));
-	gl.attachShader(traceProgram, getShader(gl, "TraceFS"));
-	gl.linkProgram(traceProgram);
-	gl.useProgram(traceProgram);
-	traceProgram.vertexPositionAttribute = gl.getAttribLocation(traceProgram, "position");
-	gl.enableVertexAttribArray(traceProgram.vertexPositionAttribute);
-
-	copyProgram = gl.createProgram();
-	gl.attachShader(copyProgram, getShader(gl, "VS"));
-	gl.attachShader(copyProgram, getShader(gl, "CopyFS"));
-	gl.linkProgram(copyProgram);
-	gl.useProgram(copyProgram);
-	traceProgram.vertexPositionAttribute = gl.getAttribLocation(copyProgram, "position");
-	gl.enableVertexAttribArray(copyProgram.vertexPositionAttribute);
-
-}
-
-function initBuffers() {
-	triangleVertexPositionBuffer = gl.createBuffer();
-	gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
-	
-	var vertices = [
-		 -1,  -1,  0,
-		 -1,  1,  0,
-		 1,  1,  0,
-
-		 -1,  -1,  0,
-		 1,  -1,  0,
-		 1,  1,  0,
-	 ];
-	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
-	triangleVertexPositionBuffer.itemSize = 3;
-	triangleVertexPositionBuffer.numItems = 3 * 2;
-}
-
-
-function tick() {
-	
-// 1st pass: Trace
-	gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
- 
-	gl.useProgram(traceProgram);
-  	gl.uniform1i(gl.getUniformLocation(traceProgram, "globalSeed"), Math.random() * 32768.0);
-	gl.uniform1i(gl.getUniformLocation(traceProgram, "baseSampleIndex"), getCurrentFrame()); 	
-	gl.uniform2i(
-		gl.getUniformLocation(traceProgram, "resolution"), 
-		getRenderTargetWidth(), 
-		getRenderTargetHeight());
-		
-	gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
-	gl.vertexAttribPointer(
-		traceProgram.vertexPositionAttribute, 
-		triangleVertexPositionBuffer.itemSize, 
-		gl.FLOAT, 
-		false, 
-		0,
-		0);
-	
-    	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-    
-	gl.disable(gl.DEPTH_TEST);
-	gl.enable(gl.BLEND);
-	gl.blendFunc(gl.ONE, gl.ONE);
-
-	gl.drawArrays(gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
-
-// 2nd pass: Average
-   	gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
-	gl.useProgram(copyProgram);
-	gl.uniform1i(gl.getUniformLocation(copyProgram, "sampleCount"), getCurrentFrame() + 1); 
-  		
-	gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
-	gl.vertexAttribPointer(
-		copyProgram.vertexPositionAttribute, 
-		triangleVertexPositionBuffer.itemSize, 
-		gl.FLOAT, 
-		false, 
-		0,
-		0);
-	
-    	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
-    
-	gl.disable(gl.DEPTH_TEST);
-	gl.disable(gl.BLEND);
-
-	gl.activeTexture(gl.TEXTURE0);
-    	gl.bindTexture(gl.TEXTURE_2D, rttTexture);
-	gl.uniform1i(gl.getUniformLocation(copyProgram, "radianceTexture"), 0);
-	gl.uniform2i(
-		gl.getUniformLocation(copyProgram, "resolution"), 
-		getRenderTargetWidth(), 
-		getRenderTargetHeight());
-	
-	gl.drawArrays(gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems);
-
-	gl.bindTexture(gl.TEXTURE_2D, null);
-}
-
-function init() {	
-	initShaders();
-	initBuffers();
-	gl.clear(gl.COLOR_BUFFER_BIT);	
-
-	rttFramebuffer = gl.createFramebuffer();
-	gl.bindFramebuffer(gl.FRAMEBUFFER, rttFramebuffer);
-	
-	rttTexture = gl.createTexture();
-	gl.bindTexture(gl.TEXTURE_2D, rttTexture);
-    	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-	
-	gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, getRenderTargetWidth(), getRenderTargetHeight(), 0, gl.RGBA, gl.FLOAT, null);  
-    	
-	gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, rttTexture, 0);
-	gl.clear(gl.COLOR_BUFFER_BIT);	
-}
-
-var oldWidth = 0;
-var oldTraceProgram;
-var oldCopyProgram;
-function compute(canvas) {
-	
-	if(	getRenderTargetWidth() != oldWidth || 
-		oldTraceProgram != document.getElementById("TraceFS") ||
-		oldCopyProgram !=  document.getElementById("CopyFS"))
-	{
-		init();
-					
-		oldWidth = getRenderTargetWidth();
-		oldTraceProgram = document.getElementById("TraceFS");
-		oldCopyProgram = document.getElementById("CopyFS");	
-	}
-
-	tick();
 }
