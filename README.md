@@ -6,4 +6,8 @@ This repo shows the webGL code for different types of rendering techniques right
 
 # Ray Tracing Output
 
-![alt tag](https://github.com/apurvmmmec/CG-Rendering-Techniques/blob/master/Rasterizer.png)
+![alt tag](https://github.com/apurvmmmec/CG-Rendering-Techniques/blob/master/RayTracerOutput.jpg)
+
+# Quasi Monte Carlo Path Tracing/ Gobal Illumination Output
+
+![alt tag](https://github.com/apurvmmmec/CG-Rendering-Techniques/blob/master/QuasiMonteCarlo_PathTracert.png)
