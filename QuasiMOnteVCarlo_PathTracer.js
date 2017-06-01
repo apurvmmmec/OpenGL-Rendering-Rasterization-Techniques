@@ -5,7 +5,6 @@
 #define IMPORTANCE_SAMPLING
 #define AA
 
-// Thanks to Iliyan Georgiev from Solid Angle for explaining proper housekeeping of sample dimensions in ranomdized Quasi-Monte Carlo
 
 precision highp float;
 
@@ -200,13 +199,12 @@ int prime(int index) {
 //This is used for deterministic sampling instead of random sampling
 float halton(int sampleIndex, int dimensionIndex) {
 #ifdef HALTON  
-  // Put your implementation of halton here
+  // Code to generate Halton sequence
   float base = float(dimensionIndex);
   float n = float(sampleIndex);
     
   float haltNo = 0.0;
   float f = 1.0;
-  //int i = sampleIndex;
   for(int a=0;a<100;a++)
   {
     if(n<=0.0){
@@ -229,11 +227,9 @@ uniform int baseSampleIndex;
 // Returns a well-distributed number in (0,1) for the dimension dimensionIndex
 float sample(int dimensionIndex) {
 #ifdef HALTON  
-  // Put your code here
-  int pDIndex= prime(dimensionIndex);
+]  int pDIndex= prime(dimensionIndex);
   return fract(halton(baseSampleIndex,pDIndex)+pixelSeed(dimensionIndex));
 #else
-  // Replace the line below to use the Halton sequence for variance reduction
   return uniformRandom();
 #endif  
 }
@@ -256,7 +252,7 @@ vec2 sample2(int dimensionIndex) {
 
 vec3 randomDirection(int dimensionIndex) {
 #ifdef BOUNCE
-  // Put your code to compute a random direction in 3D here
+  // Compute a random direction in 3D
   vec2 ep = sample2(dimensionIndex);
   float ep0=ep[0];
   float ep1=ep[1];
@@ -274,7 +270,6 @@ vec3 randomDirection(int dimensionIndex) {
 
 vec3 getEmission(Material material, vec3 normal) {
 #ifdef LIGHT  
-    // Put your code here
   return material.emission;
 #else
     // This is wrong. It just returns the diffuse color so that you see something to be sure it is working.
@@ -289,8 +284,7 @@ vec3 getReflectance(
   vec3 outDirection)
 {
 #ifdef THROUGHPUT    
-    // Put your code here
-  //We calculate the specular and diffused component of BRDF in this function
+]  //We calculate the specular and diffused component of BRDF in this function
   vec3 perfSpecDir = reflect(inDirection,normal);
   vec3 spec = material.specular * ( (2.0 + material.glossiness) / (2.0*M_PI) ) * pow(max(0.0, dot(outDirection, perfSpecDir)), material.glossiness);
   vec3 diffused = material.diffuse /(M_PI);
@@ -307,8 +301,7 @@ vec3 getGeometricTerm(
   vec3 outDirection)
 {
 #ifdef THROUGHPUT  
-    // Put your code here
-  //We calculate the geometric term in this function. 
+]  //We calculate the geometric term in this function. 
   //Geometric term is cos theta where theta is angle between the normal and the outgoing Ray
   return vec3(max(0.0, dot( normalize(outDirection), normalize(normal) )));
 #else
@@ -332,7 +325,7 @@ vec3 samplePath(Scene scene, Ray initialRay) {
     Ray outgoingRay;    
 
 #ifdef BOUNCE
-   // Put your code to compute the next ray here
+   // Code to compute the next ray
     //Calculate a new ray at the point of intersection. The origin of new ray is hit point.
     //Direction of new ray is random if using random sampling or determinintic if using Halton Sampling
     outgoingRay.direction = randomDirection(PATH_SAMPLE_DIMENSION+2*i+0);
@@ -358,7 +351,7 @@ vec3 samplePath(Scene scene, Ray initialRay) {
 #endif
 
 #ifdef THROUGHPUT    
-    // Do proper throughput computation here
+    // Throughput computation which is combination of reflected and geometric component
     vec3 ref = getReflectance(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
     vec3 geom = getGeometricTerm(hitInfo.material,hitInfo.normal,incomingRay.direction, outgoingRay.direction);
 
@@ -370,7 +363,7 @@ vec3 samplePath(Scene scene, Ray initialRay) {
     throughput /= probability;
     
 #ifdef BOUNCE
-    // Put some handling of the next and the current ray here
+    // Handling of the next and the current ray here
     incomingRay = outgoingRay;
 #endif    
   }  
@@ -457,59 +450,6 @@ void loadScene1(inout Scene scene) {
   scene.planes[1].material.specular = vec3(0.0);
   scene.planes[1].material.glossiness = 5.0;
 }
-
-/*
-void loadScene2(inout Scene scene) {
-    scene.spheres[0].position = vec3(1, -2, -12);
-    scene.spheres[0].radius = 3.0;
-    scene.spheres[0].material = 
-      Material(vec3(0.0), vec3(0.9, 0.1, 0.2), vec3(1.0), 10.0);
-
-    scene.spheres[1].position = vec3(-8, -2, -10);
-    scene.spheres[1].radius = 2.0;
-    scene.spheres[1].material = 
-      Material(vec3(0), vec3(0.8, 0.9, 0.2), vec3(1.0), 10.0);
-
-    scene.planes[0].normal = vec3(0, 1, 0);
-    scene.planes[0].d = 4.5;
-    scene.planes[0].material = 
-      Material(vec3(0.0), vec3(0.8, 0.5, 0.2), vec3(1.0), 50.0);
-
-    scene.planes[1].normal = vec3(1, -1, 1);
-    scene.planes[1].d = 80.0;
-    scene.planes[1].material = 
-      Material(vec3(2.0), vec3(0.5, 0.8, 0.2), vec3(0.0), 5.0);  
-}
-
-void loadScene3(inout Scene scene) {
-    scene.spheres[0].position = vec3(1, -2, -12);
-    scene.spheres[0].radius = 3.0;
-    scene.spheres[0].material.emission =vec3(0.0);
-    scene.spheres[0].material.diffuse = vec3(0.9, 0.9, 0.2);
-    scene.spheres[0].material.specular = vec3(1.0);
-    scene.spheres[0].material.glossiness = 20.0;
-
-    scene.spheres[1].position = vec3(-4, -1, -6);
-    scene.spheres[1].radius = 3.0;
-    scene.spheres[1].material.emission =vec3(0.0);
-    scene.spheres[1].material.diffuse = vec3(0.2, 0.9, 0.9);
-    scene.spheres[1].material.specular = vec3(1.0);
-    scene.spheres[1].material.glossiness = 20.0;
-
-    scene.planes[0].normal = vec3(0, 1, 0);
-    scene.planes[0].d = 4.5;
-    scene.planes[0].material.emission =vec3(0.0);
-    scene.planes[0].material.diffuse = vec3(0.8, 0.5, 0.2);
-    scene.planes[0].material.specular = vec3(1.0);
-    scene.planes[0].material.glossiness = 50.0;
-
-    scene.planes[1].normal = vec3(1, -1, 1);
-    scene.planes[1].d = 80.0;
-  scene.planes[1].material.emission =vec3(2.0);
-    scene.planes[1].material.diffuse = vec3(0.5, 0.8, 0.2);
-    scene.planes[1].material.specular = vec3(0.0);
-}
-*/
 
 void main() {
   // Setup scene

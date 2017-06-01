@@ -12,7 +12,7 @@ struct Material {
   vec3  specular;
   float glossiness;
 
-  // Put the variables for reflection and refraction here
+  // Variables for reflection and refraction here
   
   /*
     reflectionWeight
@@ -290,9 +290,10 @@ vec3 shadeFromLight(
 
   float diffuse_term = max(0.0, dot(lightDirection, hit_info.normal));
   float specular_term  = pow(max(0.0, dot(lightDirection, reflectedDirection)), hit_info.material.glossiness);
-  // Put your shadow test here
+  
   
   /*
+  Shadow test
   To check whether a pixel is shadowed or not , we do a simple test of 
   shooting a shadow ray from the hitPoint towards light source and check if 
   the ray intersects any object in between the hitPoint and light source.
@@ -393,7 +394,7 @@ vec3 colorForFragment(const Scene scene, const vec2 fragCoord) {
       if(!currentHitInfo.hit) break;
 
       Ray nextRay;
-    // Put your code to compute the reflection ray
+    // code to compute the reflection ray
       nextRay.direction = reflect(currentRay.direction,currentHitInfo.normal);
       nextRay.origin= currentHitInfo.position;
 
@@ -430,7 +431,7 @@ vec3 colorForFragment(const Scene scene, const vec2 fragCoord) {
        
       if(!currentHitInfo.hit) break;
       Ray nextRay;
-    // Put your code to compute the reflection ray
+    // Code to compute the reflection ray
       nextRay.direction =   refract(currentRay.direction,currentHitInfo.normal,1.0/currentHitInfo.material.refIndex);
       nextRay.origin= currentHitInfo.position;
     refractionWeight = refractionWeight*currentHitInfo.material.refractionWeight;

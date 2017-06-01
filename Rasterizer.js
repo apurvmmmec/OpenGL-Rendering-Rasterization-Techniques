@@ -63,7 +63,6 @@ void makeEmptyPolygon(out Polygon polygon) {
 
 int getCrossType(Vertex poli1, Vertex poli2, Vertex wind1, Vertex wind2) {
 #ifdef CLIPPING
-    // Put your code here
   return INSIDE;
 #else
     return INSIDE;
@@ -73,8 +72,7 @@ int getCrossType(Vertex poli1, Vertex poli2, Vertex wind1, Vertex wind2) {
 // This function assumes that the segments are not parallel or collinear.
 Vertex intersect2D(Vertex a, Vertex b, Vertex c, Vertex d) {
 #ifdef CLIPPING
-    // Put your code here
-    // We know that he equation of line betwen 2 points (x1,y1) and (x2,y2) is 
+]    // We know that he equation of line betwen 2 points (x1,y1) and (x2,y2) is 
     //              y-y1=( (y2-y1)/(x2-x1) )* (x-x1)
     // or       y= ( (y2-y1)/(x2-x1) )* (x-x1) + y1 ------------------ (1)
     // Similarly another line can be wrien as
@@ -114,7 +112,6 @@ Vertex intersect2D(Vertex a, Vertex b, Vertex c, Vertex d) {
 // is on the inner or outer side of the edge (ab)
 int edge(vec2 point, Vertex a, Vertex b) {
 #ifdef RASTERIZATION
-    // Put your code here
   // We know that he equation of line betwen 2 points (x1,y1) and (x2,y2) is 
     //              y-y1=( (y2-y1)/(x2-x1) )* (x-x1)
     //        (x2-x1)(y-y1) - (y2-y1)*(x-x1) = P
@@ -179,7 +176,6 @@ void sutherlandHodgmanClip(Polygon unClipped, Polygon clipWindow, out Polygon re
             // Handle the j-th vertex of the outputList polygon. This should make use of the function 
             // intersect() to be implemented above.
 #ifdef CLIPPING
-            // Put your code here
             Vertex E =  getWrappedPolygonVertex(oldClipped,j);
             int e = edge(vec2(E.position.x,E.position.y),A,B);
             int s = edge(vec2(S.position.x,S.position.y),A,B);
@@ -273,7 +269,6 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
     for (int i = 0; i < MAX_VERTEX_COUNT; ++i) {
         if (i < polygon.vertexCount) {
 #if defined(INTERPOLATION) || defined(ZBUFFERING)
-          // Put your code here
           
           // Temporary Vertex variables to hold values of vertices opposite to current i'th vertex 
           Vertex V1,V2; 
@@ -300,7 +295,6 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
 #else
 #endif
 #ifdef ZBUFFERING
-            // Put your code here     
           
           //Calculate interpolated vertex co-ordinates
           positionSum= positionSum+weight*polygon.vertices[i].position; 
@@ -314,7 +308,6 @@ Vertex interpolateVertex(vec2 point, Polygon polygon) {
         }
     }
     
-    //Vertex result = polygon.vertices[0];
   
 #ifdef INTERPOLATION
     colorSum /= weightSum;
@@ -338,7 +331,6 @@ mat4 computeProjectionMatrix() {
     mat4 projectionMatrix = mat4(1);
 
 #ifdef PROJECTION
-    // Put your code here
   // We use the simplest projection matrix for this exercise as the fov, aspect ratio , near and far planes are not given
   projectionMatrix = mat4(1,0,0,0,
                           0,1,0,0,
@@ -355,7 +347,6 @@ mat4 computeViewMatrix(vec3 VRP, vec3 TP, vec3 VUV) {
   
 
 #ifdef PROJECTION
-    // Put your code here
     // ViewPositionNormal = target Position - View Referenc3 Position
     vec3 VPN= TP-VRP;
     //Calculate u,v and n. Note that u,v,n reperesent the view co-ordinate system axes and are orthogonal to each other
@@ -387,7 +378,6 @@ vec3 projectVertexPosition(vec3 position) {
     mat4 projectionMatrix = computeProjectionMatrix();
   
 #ifdef PROJECTION
-    // Put your code here
   // Applying the view and projection transform to the input vertex which ahs to be projected
    vec4 p2 = projectionMatrix*viewMatrix*vec4(position,1.0);
   // Performing the perspective divide. This step (x/w,y/w,z/w,w/w) make the 4th component of 
